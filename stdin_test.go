@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"math"
 	"strings"
 	"testing"
 )
@@ -335,6 +336,51 @@ func TestMultipleCommands(t *testing.T) {
 	json.Unmarshal([]byte(lines[3]), &resp4)
 	if resp4.Paused {
 		t.Error("line 4: expected paused=false")
+	}
+}
+
+func TestAmplitudeToVolume(t *testing.T) {
+	tests := []struct {
+		name      string
+		amplitude float64
+		wantMin   float64
+		wantMax   float64
+	}{
+		{"below minimum returns min volume", 0.01, -3.0, -3.0},
+		{"at minimum returns min volume", 0.05, -3.0, -3.0},
+		{"above maximum returns max volume", 1.0, 0.0, 0.0},
+		{"at maximum returns max volume", 0.80, 0.0, 0.0},
+		{"mid amplitude returns mid-range", 0.40, -2.0, -0.5},
+		{"low amplitude is quieter than high", 0.10, -3.0, -1.5},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := amplitudeToVolume(tt.amplitude)
+			if got < tt.wantMin || got > tt.wantMax {
+				t.Errorf("amplitudeToVolume(%f) = %f, want in [%f, %f]",
+					tt.amplitude, got, tt.wantMin, tt.wantMax)
+			}
+		})
+	}
+
+	// Monotonicity: higher amplitude should yield higher (or equal) volume
+	prev := amplitudeToVolume(0.05)
+	for amp := 0.10; amp <= 0.80; amp += 0.05 {
+		cur := amplitudeToVolume(amp)
+		if cur < prev-1e-9 {
+			t.Errorf("non-monotonic: amplitudeToVolume(%f)=%f < amplitudeToVolume(prev)=%f",
+				amp, cur, prev)
+		}
+		prev = cur
+	}
+
+	// Verify no NaN or Inf
+	for _, amp := range []float64{0, 0.05, 0.1, 0.5, 0.8, 1.0, 10.0} {
+		v := amplitudeToVolume(amp)
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			t.Errorf("amplitudeToVolume(%f) returned %f", amp, v)
+		}
 	}
 }
 

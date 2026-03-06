@@ -14,6 +14,7 @@ Uses the Apple Silicon accelerometer (Bosch BMI286 IMU via IOKit HID) to detect 
 
 - macOS on Apple Silicon (M2+)
 - `sudo` (for IOKit HID accelerometer access)
+- Go 1.26+ (if building from source)
 
 ## Install
 
@@ -204,7 +205,8 @@ sudo launchctl unload /Library/LaunchDaemons/com.taigrr.spank.plist
 1. Reads raw accelerometer data directly via IOKit HID (Apple SPU sensor)
 2. Runs vibration detection (STA/LTA, CUSUM, kurtosis, peak/MAD)
 3. When a significant impact is detected, plays an embedded MP3 response
-4. 750ms cooldown between responses to prevent rapid-fire, adjustable with `--cooldown`
+4. **Volume scales with impact force** — light taps play quietly, hard slaps play at full volume
+5. 750ms cooldown between responses to prevent rapid-fire, adjustable with `--cooldown`
 
 ## Star History
 

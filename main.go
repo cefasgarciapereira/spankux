@@ -23,6 +23,7 @@ import (
 
 	"github.com/charmbracelet/fang"
 	"github.com/gopxl/beep/v2"
+	"github.com/gopxl/beep/v2/effects"
 	"github.com/gopxl/beep/v2/mp3"
 	"github.com/gopxl/beep/v2/speaker"
 	"github.com/spf13/cobra"
@@ -446,13 +447,46 @@ func listenForSlaps(ctx context.Context, pack *soundPack, accelRing *shm.RingBuf
 		} else {
 			fmt.Printf("slap #%d [%s amp=%.5fg] -> %s\n", num, ev.Severity, ev.Amplitude, file)
 		}
-		go playAudio(pack, file, &speakerInit)
+		go playAudio(pack, file, ev.Amplitude, &speakerInit)
 	}
 }
 
 var speakerMu sync.Mutex
 
-func playAudio(pack *soundPack, path string, speakerInit *bool) {
+// amplitudeToVolume maps a detected amplitude to a beep/effects.Volume
+// level. Amplitude typically ranges from ~0.05 (light tap) to ~1.0+
+// (hard slap). The mapping uses a logarithmic curve so that light taps
+// are noticeably quieter and hard hits play near full volume.
+//
+// Returns a value in the range [-3.0, 0.0] for use with effects.Volume
+// (base 2): -3.0 is ~1/8 volume, 0.0 is full volume.
+func amplitudeToVolume(amplitude float64) float64 {
+	const (
+		minAmp   = 0.05  // softest detectable
+		maxAmp   = 0.80  // treat anything above this as max
+		minVol   = -3.0  // quietest playback (1/8 volume with base 2)
+		maxVol   = 0.0   // full volume
+	)
+
+	// Clamp
+	if amplitude <= minAmp {
+		return minVol
+	}
+	if amplitude >= maxAmp {
+		return maxVol
+	}
+
+	// Normalize to [0, 1]
+	t := (amplitude - minAmp) / (maxAmp - minAmp)
+
+	// Log curve for more natural volume scaling
+	// log(1 + t*99) / log(100) maps [0,1] -> [0,1] with a log curve
+	t = math.Log(1+t*99) / math.Log(100)
+
+	return minVol + t*(maxVol-minVol)
+}
+
+func playAudio(pack *soundPack, path string, amplitude float64, speakerInit *bool) {
 	var streamer beep.StreamSeekCloser
 	var format beep.Format
 
@@ -489,8 +523,16 @@ func playAudio(pack *soundPack, path string, speakerInit *bool) {
 	}
 	speakerMu.Unlock()
 
+	// Scale volume based on slap amplitude
+	vol := &effects.Volume{
+		Streamer: streamer,
+		Base:     2,
+		Volume:   amplitudeToVolume(amplitude),
+		Silent:   false,
+	}
+
 	done := make(chan bool)
-	speaker.Play(beep.Seq(streamer, beep.Callback(func() {
+	speaker.Play(beep.Seq(vol, beep.Callback(func() {
 		done <- true
 	})))
 	<-done
