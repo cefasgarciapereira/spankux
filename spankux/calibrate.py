@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-calibrate.py: Record microphone slap samples and produce a spectral profile
-for use with spankux.py --profile.
+calibrate: Record microphone slap samples and produce a spectral profile
+for use with spankux --profile.
 """
 
 import argparse
@@ -50,7 +50,6 @@ def wait_for_transient(timeout: float, threshold: float) -> np.ndarray | None:
     Record audio in CHUNK_SIZE blocks for up to `timeout` seconds.
     Return the first chunk whose RMS exceeds `threshold`, or None on timeout.
     """
-    chunks_max = int(timeout * SAMPLE_RATE / CHUNK_SIZE) + 1
     result = [None]
 
     with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, blocksize=CHUNK_SIZE, dtype="float32") as stream:
@@ -85,7 +84,7 @@ def dominant_freq_range(mean_spectrum: np.ndarray) -> tuple[float, float]:
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="calibrate",
+        prog="calibrate-spankux",
         description="Record slap samples and produce a spectral profile for spankux.",
     )
     parser.add_argument("--samples", type=int, default=5, metavar="N",
@@ -171,8 +170,8 @@ def main():
     print(f"  Dominant freq range: {lo_hz:.0f} – {hi_hz:.0f} Hz")
     print()
     print("Usage:")
-    print(f"  python spankux.py --profile {output_path}")
-    print(f"  python spankux.py --profile {output_path} --min-amplitude {mean_rms * 0.6:.3f}")
+    print(f"  spankux --profile {output_path}")
+    print(f"  spankux --profile {output_path} --min-amplitude {mean_rms * 0.6:.3f}")
 
 
 if __name__ == "__main__":

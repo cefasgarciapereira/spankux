@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "spankux"
@@ -12,7 +12,10 @@ dependencies = ["sounddevice", "numpy"]
 
 [project.scripts]
 spankux = "spankux:main"
-calibrate-spankux = "calibrate:main"
+calibrate-spankux = "spankux.calibrate:main"
 
-[tool.setuptools]
-py-modules = ["spankux", "calibrate"]
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+spankux = ["audio/**/*.mp3"]

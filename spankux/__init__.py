@@ -407,7 +407,7 @@ def main():
     parser.add_argument("--speed", type=float, default=DEFAULT_SPEED_RATIO, metavar="F",
                         help="Playback speed multiplier (default: %(default)s)")
     parser.add_argument("--profile", default=None, metavar="PATH",
-                        help="Path to profile.json produced by calibrate.py. "
+                        help="Path to profile.json produced by calibrate-spankux. "
                              "When set, spectral similarity is checked in addition to --min-amplitude.")
     parser.add_argument("--similarity", type=float, default=DEFAULT_SIMILARITY, metavar="F",
                         help=f"Minimum cosine similarity to profile (0.0–1.0, default: {DEFAULT_SIMILARITY}). "
