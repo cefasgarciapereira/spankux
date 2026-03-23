@@ -19,82 +19,68 @@ A Linux-focused Python fork of [taigrr/spank](https://github.com/taigrr/spank/),
 ## Requirements
 
 - Python 3.10+
-- `sounddevice` and `numpy` (`pip install -r requirements.txt`)
 - One of: `mpg123`, `ffplay` (ffmpeg), or `mpv`
+
+```bash
+sudo apt install mpg123   # or: ffmpeg / mpv
+```
 
 ## Install
 
-Clone the repo:
+**From GitHub Releases (recommended):**
 
 ```bash
-git clone https://github.com/your-username/spankux
+pip install https://github.com/cefas/spankux/releases/latest/download/spankux-0.1.0-py3-none-any.whl
+```
+
+This installs the `spankux` and `calibrate-spankux` commands with all Python dependencies bundled.
+
+**From source:**
+
+```bash
+git clone https://github.com/cefas/spankux
 cd spankux
-```
-
-**Option A — Makefile (recommended, no manual venv needed):**
-
-```bash
-make run            # creates .venv automatically on first run
-make run ARGS="--sexy --fast"
-make calibrate
-```
-
-**Option B — manual venv:**
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python spankux.py
-```
-
-**Option C — editable install into your own venv:**
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
 pip install -e .
-spankux          # console script, audio path resolved via source tree
 ```
 
 ## Usage
 
 ```bash
 # Normal mode — says "ow!" when slapped
-python spankux.py
+spankux
 
 # Sexy mode — escalating responses based on slap frequency
-python spankux.py --sexy
+spankux --sexy
 
 # Halo mode — plays Halo death sounds when slapped
-python spankux.py --halo
+spankux --halo
 
 # Fast mode — smaller audio chunks and shorter cooldown
-python spankux.py --fast
-python spankux.py --sexy --fast
+spankux --fast
+spankux --sexy --fast
 
 # Custom mode — plays MP3s from a directory
-python spankux.py --custom /path/to/mp3s
+spankux --custom /path/to/mp3s
 
 # Custom mode — plays specific MP3 files
-python spankux.py --custom-files file1.mp3,file2.mp3
+spankux --custom-files file1.mp3,file2.mp3
 
 # Adjust amplitude threshold (lower = more sensitive)
-python spankux.py --min-amplitude 0.10   # more sensitive
-python spankux.py --min-amplitude 0.25   # less sensitive
+spankux --min-amplitude 0.10   # more sensitive
+spankux --min-amplitude 0.25   # less sensitive
 
 # Set cooldown between responses in milliseconds (default: 750)
-python spankux.py --cooldown 500
+spankux --cooldown 500
 
 # Set playback speed multiplier (default: 1.0)
-python spankux.py --speed 0.7   # slower and deeper
-python spankux.py --speed 1.5   # faster
+spankux --speed 0.7   # slower and deeper
+spankux --speed 1.5   # faster
 
 # Scale playback volume by how hard you slap
-python spankux.py --volume-scaling
+spankux --volume-scaling
 
 # Enable JSON stdio interface for GUI integration
-python spankux.py --stdio
+spankux --stdio
 ```
 
 ### Modes
@@ -126,24 +112,24 @@ By default, any loud sound that exceeds the amplitude threshold can trigger a re
 ### Step 1 — record a profile
 
 ```bash
-python calibrate.py
+calibrate-spankux
 ```
 
 Follow the prompts: the script measures your ambient noise floor, then asks you to slap your laptop a few times. It saves `profile.json` in the current directory and prints a suggested `--min-amplitude` value.
 
 ```bash
 # Customise number of samples and output path
-python calibrate.py --samples 7 --output my_profile.json
+calibrate-spankux --samples 7 --output my_profile.json
 ```
 
 ### Step 2 — use the profile
 
 ```bash
-python spankux.py --profile profile.json
+spankux --profile profile.json
 
 # Adjust cosine-similarity threshold (0.0–1.0, default 0.80)
-python spankux.py --profile profile.json --similarity 0.70   # more permissive
-python spankux.py --profile profile.json --similarity 0.90   # stricter
+spankux --profile profile.json --similarity 0.70   # more permissive
+spankux --profile profile.json --similarity 0.90   # stricter
 ```
 
 The `--similarity` value is the minimum [cosine similarity](https://en.wikipedia.org/wiki/Cosine_similarity) between an incoming audio chunk's FFT spectrum and the stored profile. Lower values accept a broader range of sounds; higher values require a closer match.

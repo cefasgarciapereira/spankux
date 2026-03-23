@@ -1,5 +1,9 @@
 /spank
 dist/
+build/
+*.egg-info/
+__pycache__/
+venv/
 *.log
 .crush
 spank.test
