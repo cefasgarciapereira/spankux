@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="doc/logo.png" alt="spank logo" width="200">
+  <img src="doc/logo.png" alt="spankux logo" width="200">
 </p>
 
-# spank
+# spankux
 
 **English** | [简体中文][readme-zh-link]
 
-Slap your MacBook, it yells back.
+Slap your laptop, it yells back.
 
 > "this is the most amazing thing i've ever seen" — [@kenwheeler](https://x.com/kenwheeler)
 
@@ -14,220 +14,177 @@ Slap your MacBook, it yells back.
 
 > "peak engineering" — [@tylertaewook](https://x.com/tylertaewook)
 
-Uses the Apple Silicon accelerometer (Bosch BMI286 IMU via IOKit HID) to detect physical hits on your laptop and plays audio responses. Single binary, no dependencies.
+A Linux-focused Python fork of [taigrr/spank](https://github.com/taigrr/spank/), which plays audio responses when you slap your laptop. The original relies on the Apple Silicon accelerometer (an IMU built into the hardware); this fork takes a simpler approach that works on any machine — it listens through the microphone and detects slaps by their acoustic signature.
 
 ## Requirements
 
-- macOS on Apple Silicon (M2+)
-- `sudo` (for IOKit HID accelerometer access)
-- Go 1.26+ (if building from source)
+- Python 3.10+
+- `sounddevice` and `numpy` (`pip install -r requirements.txt`)
+- One of: `mpg123`, `ffplay` (ffmpeg), or `mpv`
 
 ## Install
 
-Download from the [latest release](https://github.com/taigrr/spank/releases/latest).
-
-Or build from source:
+Clone the repo:
 
 ```bash
-go install github.com/taigrr/spank@latest
+git clone https://github.com/your-username/spankux
+cd spankux
 ```
 
-> **Note:** `go install` places the binary in `$GOBIN` (if set) or `$(go env GOPATH)/bin` (which defaults to `~/go/bin`). Copy it to a system path so `sudo spank` works. For example, with the default Go settings:
->
-> ```bash
-> sudo cp "$(go env GOPATH)/bin/spank" /usr/local/bin/spank
-> ```
+**Option A — Makefile (recommended, no manual venv needed):**
+
+```bash
+make run            # creates .venv automatically on first run
+make run ARGS="--sexy --fast"
+make calibrate
+```
+
+**Option B — manual venv:**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python spankux.py
+```
+
+**Option C — editable install into your own venv:**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+spankux          # console script, audio path resolved via source tree
+```
 
 ## Usage
 
 ```bash
 # Normal mode — says "ow!" when slapped
-sudo spank
+python spankux.py
 
 # Sexy mode — escalating responses based on slap frequency
-sudo spank --sexy
+python spankux.py --sexy
 
 # Halo mode — plays Halo death sounds when slapped
-sudo spank --halo
+python spankux.py --halo
 
-# Fast mode — faster polling and shorter cooldown
-sudo spank --fast
-sudo spank --sexy --fast
+# Fast mode — smaller audio chunks and shorter cooldown
+python spankux.py --fast
+python spankux.py --sexy --fast
 
-# Custom mode — plays your own MP3 files from a directory
-sudo spank --custom /path/to/mp3s
+# Custom mode — plays MP3s from a directory
+python spankux.py --custom /path/to/mp3s
 
-# Adjust sensitivity with amplitude threshold (lower = more sensitive)
-sudo spank --min-amplitude 0.1   # more sensitive
-sudo spank --min-amplitude 0.25  # less sensitive
-sudo spank --sexy --min-amplitude 0.2
+# Custom mode — plays specific MP3 files
+python spankux.py --custom-files file1.mp3,file2.mp3
 
-# Set cooldown period in millisecond (default: 750)
-sudo spank --cooldown 600
+# Adjust amplitude threshold (lower = more sensitive)
+python spankux.py --min-amplitude 0.10   # more sensitive
+python spankux.py --min-amplitude 0.25   # less sensitive
+
+# Set cooldown between responses in milliseconds (default: 750)
+python spankux.py --cooldown 500
 
 # Set playback speed multiplier (default: 1.0)
-sudo spank --speed 0.7   # slower and deeper
-sudo spank --speed 1.5   # faster
-sudo spank --sexy --speed 0.6
+python spankux.py --speed 0.7   # slower and deeper
+python spankux.py --speed 1.5   # faster
+
+# Scale playback volume by how hard you slap
+python spankux.py --volume-scaling
+
+# Enable JSON stdio interface for GUI integration
+python spankux.py --stdio
 ```
 
 ### Modes
 
-**Pain mode** (default): Randomly plays from 10 pain/protest audio clips when a slap is detected.
+**Pain mode** (default): Randomly plays from pain/protest audio clips when a slap is detected.
 
-**Sexy mode** (`--sexy`): Tracks slaps within a rolling 5-minute window. The more you slap, the more intense the audio response. 60 levels of escalation.
+**Sexy mode** (`--sexy`): Tracks slaps within a rolling window. The more you slap, the more intense the audio response. Escalation across many levels.
 
-**Halo mode** (`--halo`): Randomly plays from death sound effects from the Halo video game series when a slap is detected.
+**Halo mode** (`--halo`): Randomly plays death sound effects from the Halo video game series.
 
-**Custom mode** (`--custom`): Randomly plays MP3 files from a custom directory you specify.
+**Custom mode** (`--custom` / `--custom-files`): Randomly plays MP3 files from a directory or an explicit file list.
 
 ### Detection tuning
 
-Use `--fast` for a more responsive profile with faster polling (4ms vs 10ms), shorter cooldown (350ms vs 750ms), higher sensitivity (0.18 vs 0.05 threshold), and larger sample batch (320 vs 200).
+`--fast` uses smaller audio chunks for lower latency and sets a shorter cooldown (350 ms) and a higher default amplitude threshold (0.18). You can still override individual values with `--min-amplitude` and `--cooldown`.
 
-You can still override individual values with `--min-amplitude` and `--cooldown` when needed.
+#### Sensitivity
 
-### Sensitivity
+`--min-amplitude` (default `0.05`) controls the minimum microphone RMS level required to trigger a response:
 
-Control detection sensitivity with `--min-amplitude` (default: `0.05`):
+- `0.05–0.10` — very sensitive, detects light taps
+- `0.15–0.30` — balanced
+- `0.30–0.50` — only strong impacts trigger sounds
 
-- Lower values (e.g., 0.05-0.10): Very sensitive, detects light taps
-- Medium values (e.g., 0.15-0.30): Balanced sensitivity
-- Higher values (e.g., 0.30-0.50): Only strong impacts trigger sounds
+## Spectral calibration (reduce false positives)
 
-The value represents the minimum acceleration amplitude (in g-force) required to trigger a sound.
+By default, any loud sound that exceeds the amplitude threshold can trigger a response. The optional calibration workflow records a few actual slap samples and builds a frequency-domain fingerprint of your specific laptop's slap sound. Detection then requires both sufficient loudness *and* spectral similarity to that fingerprint, which greatly reduces false triggers from voices, music, or desk bumps.
 
-## Running as a Service
-
-To have spank start automatically at boot, create a launchd plist. Pick your mode:
-
-<details>
-<summary>Pain mode (default)</summary>
+### Step 1 — record a profile
 
 ```bash
-sudo tee /Library/LaunchDaemons/com.taigrr.spank.plist > /dev/null << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.taigrr.spank</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/usr/local/bin/spank</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardOutPath</key>
-    <string>/tmp/spank.log</string>
-    <key>StandardErrorPath</key>
-    <string>/tmp/spank.err</string>
-</dict>
-</plist>
-EOF
+python calibrate.py
 ```
 
-</details>
-
-<details>
-<summary>Sexy mode</summary>
+Follow the prompts: the script measures your ambient noise floor, then asks you to slap your laptop a few times. It saves `profile.json` in the current directory and prints a suggested `--min-amplitude` value.
 
 ```bash
-sudo tee /Library/LaunchDaemons/com.taigrr.spank.plist > /dev/null << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.taigrr.spank</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/usr/local/bin/spank</string>
-        <string>--sexy</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardOutPath</key>
-    <string>/tmp/spank.log</string>
-    <key>StandardErrorPath</key>
-    <string>/tmp/spank.err</string>
-</dict>
-</plist>
-EOF
+# Customise number of samples and output path
+python calibrate.py --samples 7 --output my_profile.json
 ```
 
-</details>
-
-<details>
-<summary>Halo mode</summary>
+### Step 2 — use the profile
 
 ```bash
-sudo tee /Library/LaunchDaemons/com.taigrr.spank.plist > /dev/null << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.taigrr.spank</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/usr/local/bin/spank</string>
-        <string>--halo</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardOutPath</key>
-    <string>/tmp/spank.log</string>
-    <key>StandardErrorPath</key>
-    <string>/tmp/spank.err</string>
-</dict>
-</plist>
-EOF
+python spankux.py --profile profile.json
+
+# Adjust cosine-similarity threshold (0.0–1.0, default 0.80)
+python spankux.py --profile profile.json --similarity 0.70   # more permissive
+python spankux.py --profile profile.json --similarity 0.90   # stricter
 ```
 
-</details>
+The `--similarity` value is the minimum [cosine similarity](https://en.wikipedia.org/wiki/Cosine_similarity) between an incoming audio chunk's FFT spectrum and the stored profile. Lower values accept a broader range of sounds; higher values require a closer match.
 
-> **Note:** Update the path to `spank` if you installed it elsewhere (e.g. `~/go/bin/spank`).
+## JSON stdio interface
 
-Load and start the service:
+Pass `--stdio` to enable machine-readable JSON output and accept commands on stdin. Useful for GUI wrappers.
 
-```bash
-sudo launchctl load /Library/LaunchDaemons/com.taigrr.spank.plist
+**Events emitted on stdout:**
+
+```json
+{"status": "ready"}
+{"timestamp": "2026-03-22T14:00:00Z", "slapNumber": 1, "amplitude": 0.31415, "file": "pain_01.mp3"}
 ```
 
-Since the plist lives in `/Library/LaunchDaemons` and no `UserName` key is set, launchd runs it as root — no `sudo` needed.
+**Commands accepted on stdin:**
 
-To stop or unload:
-
-```bash
-sudo launchctl unload /Library/LaunchDaemons/com.taigrr.spank.plist
+```json
+{"cmd": "pause"}
+{"cmd": "resume"}
+{"cmd": "status"}
+{"cmd": "volume-scaling"}
+{"cmd": "set", "amplitude": 0.15}
+{"cmd": "set", "cooldown": 500}
+{"cmd": "set", "speed": 1.2}
+{"cmd": "set", "similarity": 0.75}
 ```
 
 ## How it works
 
-1. Reads raw accelerometer data directly via IOKit HID (Apple SPU sensor)
-2. Runs vibration detection (STA/LTA, CUSUM, kurtosis, peak/MAD)
-3. When a significant impact is detected, plays an embedded MP3 response
-4. **Optional volume scaling** (`--volume-scaling`) — light taps play quietly, hard slaps play at full volume
-5. **Optional speed control** (`--speed`) — adjusts playback speed and pitch (0.5 = half speed, 2.0 = double speed)
-6. 750ms cooldown between responses to prevent rapid-fire, adjustable with `--cooldown`
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=taigrr/spank&type=date&legend=top-left)](https://www.star-history.com/#taigrr/spank&type=date&legend=top-left)
+1. Opens the default microphone via `sounddevice` at 44 100 Hz.
+2. For each audio chunk (~23 ms), computes the RMS amplitude.
+3. If RMS exceeds `--min-amplitude` and the cooldown has elapsed, a slap is registered.
+4. **Optional spectral gate** (`--profile`): the chunk's FFT magnitude is compared to the stored profile via cosine similarity; chunks that don't match are ignored.
+5. **Optional volume scaling** (`--volume-scaling`): light taps play quietly, hard slaps play at full volume.
+6. **Optional speed control** (`--speed`): adjusts playback speed and pitch.
+7. The selected MP3 is played in a background thread using `mpg123`, `ffplay`, or `mpv`.
 
 ## Credits
 
-Sensor reading and vibration detection ported from [olvvier/apple-silicon-accelerometer](https://github.com/olvvier/apple-silicon-accelerometer).
+Original concept and audio assets by [taigrr/spank](https://github.com/taigrr/spank/).
 
 ## License
 
