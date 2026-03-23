@@ -30,7 +30,7 @@ sudo apt install mpg123   # or: ffmpeg / mpv
 **From GitHub Releases (recommended):**
 
 ```bash
-pip install https://github.com/cefas/spankux/releases/latest/download/spankux-0.1.0-py3-none-any.whl
+pip install https://github.com/cefasgarciapereira/spankux/releases/download/v1.0.0/spankux-0.1.0-py3-none-any.whl
 ```
 
 This installs the `spankux` and `calibrate-spankux` commands with all Python dependencies bundled.
